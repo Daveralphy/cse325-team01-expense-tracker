@@ -1,0 +1,38 @@
+@page "/expenses"
+
+@using Microsoft.AspNetCore.Authorization
+@using ExpenseTracker.Services
+
+@attribute [Authorize]
+@inject CurrentUserService CurrentUser
+
+<PageTitle>My Expenses</PageTitle>
+
+<h1>My Expenses</h1>
+
+@if (!userContextReady)
+{
+    <p><em>Loading your secure expense area...</em></p>
+}
+else
+{
+    <div class="alert alert-info" role="status">
+        Your account is authenticated and your user-scoped expense area is ready.
+    </div>
+
+    <p>
+        Expense entry and reporting features will be added by the team in separate
+        feature branches. Those features should use <code>CurrentUserService</code>
+        to associate every expense with the signed-in user.
+    </p>
+}
+
+@code {
+    private bool userContextReady;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ = await CurrentUser.GetRequiredUserIdAsync();
+        userContextReady = true;
+    }
+}

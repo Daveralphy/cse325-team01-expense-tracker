@@ -1,0 +1,19 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Expense Tracker</h1>
+
+<p class="lead">Record and understand your spending in one secure place.</p>
+
+<AuthorizeView>
+    <Authorized>
+        <p>Welcome back, <strong>@context.User.Identity?.Name</strong>.</p>
+        <a class="btn btn-primary" href="expenses">Go to My Expenses</a>
+    </Authorized>
+    <NotAuthorized>
+        <p>Create an account or sign in to access your personal expense area.</p>
+        <a class="btn btn-primary me-2" href="Account/Register">Register</a>
+        <a class="btn btn-outline-primary" href="Account/Login">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
