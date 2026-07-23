@@ -24,6 +24,8 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddScoped<CurrentUserService>();
+//Benjamin - this is our expense service
+builder.Services.AddScoped<ExpenseService>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -33,7 +35,7 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -55,9 +57,12 @@ var app = builder.Build();
 
 // Create or update the local development database from the checked-in
 // migrations. The database file itself is intentionally not committed.
+
+//Benjamin - Guyus I have updated this so that we can create our expenses.
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+    using var dbContext = dbFactory.CreateDbContext();
     dbContext.Database.Migrate();
 }
 
