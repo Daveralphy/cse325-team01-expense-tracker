@@ -27,7 +27,17 @@ public class ExpenseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         }
         else
         {
-            context.Expenses.Update(expense);
+            var existing = await context.Expenses
+                .FirstOrDefaultAsync(e => e.Id == expense.Id && e.UserId == userId);
+
+            if (existing is null)
+                return; 
+
+            existing.Title    = expense.Title;
+            existing.Amount   = expense.Amount;
+            existing.Category = expense.Category;
+            existing.Date     = expense.Date;
+            existing.Note     = expense.Note;
         }
 
         await context.SaveChangesAsync();
