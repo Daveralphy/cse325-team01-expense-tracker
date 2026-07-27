@@ -1,0 +1,255 @@
+@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using ExpenseTracker.Data
+@using ExpenseTracker.Services
+
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject ExpenseService ExpenseService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Summary Dashboard</PageTitle>
+
+<div class="mb-4">
+    <h1 class="h2 mb-1">Summary Dashboard</h1>
+    <p class="text-muted mb-0">
+        View a summary of your monthly spending.
+    </p>
+</div>
+
+@if (expenses is null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Loading dashboard...</p>
+    </div>
+}
+else if (expenses.Count == 0)
+{
+    <div class="alert alert-info border-0 shadow-sm">
+        No expenses are available yet.
+        <a href="expenses" class="alert-link">Add an expense</a>
+        to begin viewing your spending summary.
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Total This Month</p>
+                    <h2 class="h3 fw-bold text-primary mb-0">
+                        @monthlyTotal.ToString("C")
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Expenses This Month</p>
+                    <h2 class="h3 fw-bold mb-0">
+                        @monthlyExpenses.Count
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Largest Expense</p>
+
+                    @if (largestExpense is not null)
+                    {
+                        <h2 class="h3 fw-bold text-danger mb-1">
+                            @largestExpense.Amount.ToString("C")
+                        </h2>
+                        <small class="text-muted">@largestExpense.Title</small>
+                    }
+                    else
+                    {
+                        <h2 class="h3 fw-bold mb-0">$0.00</h2>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-sm-row justify-content-between mb-3">
+                <div>
+                    <h2 class="h5 fw-bold mb-1">Spending by Category</h2>
+                    <p class="text-muted small mb-0">
+                        @DateTime.Today.ToString("MMMM yyyy")
+                    </p>
+                </div>
+            </div>
+
+            @if (categorySummaries.Count == 0)
+            {
+                <p class="text-muted mb-0">
+                    No expenses were recorded this month.
+                </p>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var category in categorySummaries)
+                    {
+                        <div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="fw-semibold">@category.Name</span>
+                                <span>@category.Total.ToString("C")</span>
+                            </div>
+
+                            <div class="progress"
+                                 role="progressbar"
+                                 aria-label="@category.Name spending"
+                                 aria-valuenow="@GetBarWidth(category.Total)"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"
+                                 style="height: 22px;">
+                                <div class="progress-bar"
+                                     style="@($"width: {GetBarWidth(category.Total)}%")">
+                                    @GetPercentage(category.Total).ToString("F0")%
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card-header bg-white border-0 pt-3 px-3 px-md-4">
+            <h2 class="h5 fw-bold mb-0">Recent Expenses</h2>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var expense in recentExpenses)
+                        {
+                            <tr>
+                                <td class="text-muted">
+                                    @expense.Date.ToString("yyyy-MM-dd")
+                                </td>
+                                <td class="fw-semibold">@expense.Title</td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        @expense.Category
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold">
+                                    @expense.Amount.ToString("C")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Expense>? expenses;
+    private List<Expense> monthlyExpenses = [];
+    private List<Expense> recentExpenses = [];
+    private List<CategorySummary> categorySummaries = [];
+
+    private decimal monthlyTotal;
+    private Expense? largestExpense;
+    private string userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        userId =
+            user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? user.FindFirst("sub")?.Value
+            ?? string.Empty;
+
+        expenses = await ExpenseService.GetExpensesAsync(userId);
+
+        BuildDashboard();
+    }
+
+    private void BuildDashboard()
+    {
+        if (expenses is null)
+        {
+            return;
+        }
+
+        var currentMonth = DateTime.Today.Month;
+        var currentYear = DateTime.Today.Year;
+
+        monthlyExpenses = expenses
+            .Where(expense =>
+                expense.Date.Month == currentMonth &&
+                expense.Date.Year == currentYear)
+            .ToList();
+
+        monthlyTotal = monthlyExpenses.Sum(expense => expense.Amount);
+
+        largestExpense = monthlyExpenses
+            .OrderByDescending(expense => expense.Amount)
+            .FirstOrDefault();
+
+        categorySummaries = monthlyExpenses
+            .GroupBy(expense => expense.Category)
+            .Select(group => new CategorySummary
+            {
+                Name = group.Key,
+                Total = group.Sum(expense => expense.Amount)
+            })
+            .OrderByDescending(category => category.Total)
+            .ToList();
+
+        recentExpenses = expenses
+            .OrderByDescending(expense => expense.Date)
+            .ThenByDescending(expense => expense.Id)
+            .Take(5)
+            .ToList();
+    }
+
+    private decimal GetPercentage(decimal categoryTotal)
+    {
+        if (monthlyTotal == 0)
+        {
+            return 0;
+        }
+
+        return categoryTotal / monthlyTotal * 100;
+    }
+
+    private int GetBarWidth(decimal categoryTotal)
+    {
+        return (int)Math.Round(GetPercentage(categoryTotal));
+    }
+
+    private class CategorySummary
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+    }
+}
