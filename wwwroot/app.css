@@ -1,5 +1,12 @@
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
 }
 
 a, .btn-link {
@@ -13,7 +20,7 @@ a, .btn-link {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
@@ -42,10 +49,72 @@ h1:focus {
     color: white;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
 
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
+}
+
+/* ── Responsive Table ── */
+/* On mobile, make tables scroll horizontally */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ── Responsive Forms ── */
+/* Stack form elements on mobile */
+@media (max-width: 640px) {
+    .form-control,
+    .form-select,
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* ── Responsive Grid ── */
+@media (max-width: 640px) {
+    .row {
+        flex-direction: column;
+    }
+
+    .col, [class*="col-"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+}
+
+/* ── Tablet adjustments ── */
+@media (min-width: 641px) and (max-width: 1023px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
 }
