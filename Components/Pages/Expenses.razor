@@ -160,45 +160,6 @@ else
     </div>
 
     <div class="d-none d-md-block card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-
-                    <div class="col-md-4">
-                        <label class="form-label">Category</label>
-                        <InputSelect @bind-Value="selectedCategory" class="form-select">
-                            <option value="">All Categories</option>
-                            <option>Food</option>
-                            <option>Housing</option>
-                            <option>Utilities</option>
-                            <option>Entertainment</option>
-                            <option>Transport</option>
-                            <option>General</option>
-                        </InputSelect>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">From</label>
-                        <InputDate @bind-Value="startDate"
-                                class="form-control" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">To</label>
-                        <InputDate @bind-Value="endDate"
-                                class="form-control" />
-                    </div>
-
-                    <div class="col-md-2">
-                        <button class="btn btn-outline-secondary w-100"
-                                @onclick="ClearFilters">
-                            Reset
-                        </button>
-                    </div>
-
-                </div>
-            </div>
-        </div>
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
@@ -210,7 +171,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var exp in FilteredExpenses)
+                @foreach (var exp in expenses)
                 {
                     <tr>
                         <td class="text-muted small">@exp.Date.ToString("yyyy-MM-dd")</td>
@@ -242,10 +203,6 @@ else
     private bool exportSucceeded;
     private string? exportMessage;
     private string userId = string.Empty;
-
-    private string? selectedCategory;
-    private DateTime? startDate;
-    private DateTime? endDate;
 
     protected override async Task OnInitializedAsync()
     {
@@ -311,19 +268,90 @@ else
         isEditing = false;
     }
 
-    private IEnumerable<Expense> FilteredExpenses =>
-        expenses?
-            .Where(e =>
-                (string.IsNullOrEmpty(selectedCategory) || e.Category == selectedCategory) &&
-                (!startDate.HasValue || e.Date.Date >= startDate.Value.Date) &&
-                (!endDate.HasValue || e.Date.Date <= endDate.Value.Date))
-            .OrderByDescending(e => e.Date)
-        ?? Enumerable.Empty<Expense>();
-
-    private void ClearFilters()
+    private async Task ExportExpensesAsync()
     {
-        selectedCategory = null;
-        startDate = null;
-        endDate = null;
+        if (expenses is null || expenses.Count == 0 || isExporting)
+        {
+            return;
+        }
+
+        isExporting = true;
+        exportMessage = null;
+
+        try
+        {
+            var csvContent = GenerateCsv(expenses);
+            var fileName = $"expenses-{DateTime.Today:yyyy-MM-dd}.csv";
+
+            await JSRuntime.InvokeVoidAsync(
+                "downloadCsvFile",
+                fileName,
+                csvContent);
+
+            exportSucceeded = true;
+            exportMessage =
+                $"{expenses.Count} expense record(s) exported successfully.";
+        }
+        catch
+        {
+            exportSucceeded = false;
+            exportMessage =
+                "The expense records could not be exported. Please try again.";
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private static string GenerateCsv(IEnumerable<Expense> expensesToExport)
+    {
+        var csv = new StringBuilder();
+
+        csv.Append('\uFEFF');
+        csv.AppendLine("Date,Title,Category,Amount,Note");
+
+        foreach (var expense in expensesToExport)
+        {
+            var row = string.Join(",",
+                EscapeCsvValue(expense.Date.ToString(
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture)),
+                EscapeCsvValue(expense.Title),
+                EscapeCsvValue(expense.Category),
+                EscapeCsvValue(expense.Amount.ToString(
+                    "F2",
+                    CultureInfo.InvariantCulture)),
+                EscapeCsvValue(expense.Note));
+
+            csv.AppendLine(row);
+        }
+
+        return csv.ToString();
+    }
+
+    private static string EscapeCsvValue(string? value)
+    {
+        var safeValue = value ?? string.Empty;
+
+        if (safeValue.Contains('"'))
+        {
+            safeValue = safeValue.Replace("\"", "\"\"");
+        }
+
+        if (safeValue.Contains(',') ||
+            safeValue.Contains('"') ||
+            safeValue.Contains('\r') ||
+            safeValue.Contains('\n'))
+        {
+            safeValue = $"\"{safeValue}\"";
+        }
+
+        return safeValue;
+    }
+
+    private void ClearExportMessage()
+    {
+        exportMessage = null;
     }
 }
