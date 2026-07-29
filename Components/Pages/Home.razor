@@ -1,19 +1,56 @@
 ﻿@page "/"
-
 <PageTitle>Home</PageTitle>
 
-<h1>Expense Tracker</h1>
+<div class="container-fluid px-3 px-md-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+            <div class="mt-4 mt-md-5">
+                <h1 class="display-5 fw-bold">Expense Tracker</h1>
+                <p class="lead text-muted">Record and understand your spending in one secure place.</p>
 
-<p class="lead">Record and understand your spending in one secure place.</p>
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="alert alert-success border-0 shadow-sm rounded-3 mt-4">
+                            <p class="mb-2">Welcome back, <strong>@context.User.Identity?.Name</strong>.</p>
+                            <a class="btn btn-primary" href="expenses">Go to My Expenses</a>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <p class="text-muted mt-3">Create an account or sign in to access your personal expense area.</p>
+                        <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
+                            <a class="btn btn-primary" href="Account/Register">Register</a>
+                            <a class="btn btn-outline-primary" href="Account/Login">Log in</a>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
 
-<AuthorizeView>
-    <Authorized>
-        <p>Welcome back, <strong>@context.User.Identity?.Name</strong>.</p>
-        <a class="btn btn-primary" href="expenses">Go to My Expenses</a>
-    </Authorized>
-    <NotAuthorized>
-        <p>Create an account or sign in to access your personal expense area.</p>
-        <a class="btn btn-primary me-2" href="Account/Register">Register</a>
-        <a class="btn btn-outline-primary" href="Account/Login">Log in</a>
-    </NotAuthorized>
-</AuthorizeView>
+                <div class="row g-3 mt-4">
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <h5 class="card-title fw-bold">📝 Track Expenses</h5>
+                                <p class="card-text text-muted small">Log your daily expenses with title, amount, category, date and notes.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <h5 class="card-title fw-bold">📂 Organize by Category</h5>
+                                <p class="card-text text-muted small">Group expenses into categories like Food, Housing, Transport and more.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <h5 class="card-title fw-bold">🔒 Private and Secure</h5>
+                                <p class="card-text text-muted small">Your expenses are private to your account. Register to get started.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
