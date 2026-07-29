@@ -26,6 +26,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 builder.Services.AddScoped<CurrentUserService>();
 //Benjamin - this is our expense service
 builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<IncomeService>();
 
 builder.Services.AddAuthentication(options =>
     {
