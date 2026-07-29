@@ -3,9 +3,11 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using ExpenseTracker.Data
 @using ExpenseTracker.Services
+@using System.Globalization
 
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 
 @inject ExpenseService ExpenseService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -99,6 +101,45 @@ else
             }
             else
             {
+                @if (categorySummaries.Count > 0)
+                {
+                    <div class="row align-items-center g-4 mb-4">
+                        <div class="col-12 col-md-5 text-center">
+                            <div class="expense-pie-chart"
+                                 style="@GetPieChartStyle()"
+                                 role="img"
+                                 aria-label="Pie chart showing monthly expenses by category">
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-7">
+                            <h3 class="h6 fw-bold mb-3">Category Breakdown</h3>
+
+                            <div class="d-flex flex-column gap-2">
+                                @for (var index = 0; index < categorySummaries.Count; index++)
+                                {
+                                    var category = categorySummaries[index];
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="category-color"
+                                                  style="@($"background-color: {GetCategoryColor(index)}")">
+                                            </span>
+
+                                            <span>@category.Name</span>
+                                        </div>
+
+                                        <span class="fw-semibold">
+                                            @category.Total.ToString("C")
+                                            (@GetPercentage(category.Total).ToString("F0")%)
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 <div class="d-flex flex-column gap-3">
                     @foreach (var category in categorySummaries)
                     {
@@ -178,6 +219,9 @@ else
     private Expense? largestExpense;
     private string userId = string.Empty;
 
+    private readonly CancellationTokenSource refreshCancellationTokenSource = new();
+    private Task? refreshTask;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -188,9 +232,57 @@ else
             ?? user.FindFirst("sub")?.Value
             ?? string.Empty;
 
-        expenses = await ExpenseService.GetExpensesAsync(userId);
+        await LoadDashboardAsync();
 
+        refreshTask = RefreshDashboardPeriodicallyAsync(
+            refreshCancellationTokenSource.Token);
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        expenses = await ExpenseService.GetExpensesAsync(userId);
         BuildDashboard();
+    }
+
+    private async Task RefreshDashboardPeriodicallyAsync(
+        CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadDashboardAsync();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        // Expected when the user leaves the dashboard.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        refreshCancellationTokenSource.Cancel();
+
+        if (refreshTask is not null)
+        {
+            try
+            {
+                await refreshTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during disposal.
+            }
+        }
+
+        refreshCancellationTokenSource.Dispose();
     }
 
     private void BuildDashboard()
@@ -245,6 +337,51 @@ else
     private int GetBarWidth(decimal categoryTotal)
     {
         return (int)Math.Round(GetPercentage(categoryTotal));
+    }
+
+    private static readonly string[] ChartColors =
+    [
+        "#0d6efd",
+        "#198754",
+        "#ffc107",
+        "#dc3545",
+        "#6f42c1",
+        "#0dcaf0",
+        "#fd7e14",
+        "#6c757d"
+    ];
+
+    private string GetCategoryColor(int index)
+    {
+        return ChartColors[index % ChartColors.Length];
+    }
+
+    private string GetPieChartStyle()
+    {
+        if (monthlyTotal <= 0 || categorySummaries.Count == 0)
+        {
+            return "background: #e9ecef;";
+        }
+
+        var segments = new List<string>();
+        decimal currentPercentage = 0;
+
+        for (var index = 0; index < categorySummaries.Count; index++)
+        {
+            var categoryPercentage =
+                GetPercentage(categorySummaries[index].Total);
+
+            var endPercentage = currentPercentage + categoryPercentage;
+
+            segments.Add(
+                $"{GetCategoryColor(index)} " +
+                $"{currentPercentage.ToString("F2", CultureInfo.InvariantCulture)}% " +
+                $"{endPercentage.ToString("F2", CultureInfo.InvariantCulture)}%");
+
+            currentPercentage = endPercentage;
+        }
+
+        return $"background: conic-gradient({string.Join(", ", segments)});";
     }
 
     private class CategorySummary

@@ -1,0 +1,15 @@
+.expense-pie-chart {
+    width: min(260px, 75vw);
+    aspect-ratio: 1;
+    margin: 0 auto;
+    border-radius: 50%;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.15);
+}
+
+.category-color {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    border-radius: 0.2rem;
+}
