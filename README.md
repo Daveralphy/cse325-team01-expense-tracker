@@ -31,6 +31,23 @@ dotnet run
 Open the HTTPS URL shown in the terminal. Register an account, log in, and open
 **My Expenses** to verify that protected access works.
 
+## Azure deployment notes
+
+The application is currently aligned with the team checkpoint agreement to stay on
+.NET 8 and to prepare for Azure App Service deployment.
+
+Recommended deployment approach:
+
+1. Create an Azure App Service for a .NET 8 web app.
+2. Set the runtime stack to `DOTNETCORE|8.0`.
+3. Configure the production connection string using the
+   `ConnectionStrings__DefaultConnection` application setting.
+4. Keep the application database on SQLite for this course project, or replace
+   it with Azure SQL later if the team needs a managed production database.
+
+For Azure App Service, the app now uses forwarded headers so request scheme and
+host information are preserved correctly behind the reverse proxy.
+
 ## Development workflow
 
 1. Pull the latest `main` branch.
