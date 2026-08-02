@@ -13,3 +13,4 @@ Data/DataProtectionKeys/
 
 # Local configuration and secrets
 appsettings.Local.json
+publish/
