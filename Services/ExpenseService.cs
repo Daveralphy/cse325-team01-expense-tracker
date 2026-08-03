@@ -5,7 +5,7 @@ namespace ExpenseTracker.Services;
 
 public class ExpenseService(IDbContextFactory<ApplicationDbContext> dbFactory)
 {
-    // Read (Get user expenses)
+    // Return only the expenses that belong to the authenticated user.
     public async Task<List<Expense>> GetExpensesAsync(string userId)
     {
         using var context = dbFactory.CreateDbContext();
@@ -15,7 +15,7 @@ public class ExpenseService(IDbContextFactory<ApplicationDbContext> dbFactory)
             .ToListAsync();
     }
 
-    // Create and read 
+    // Create a new expense or update an existing expense for the authenticated user. 
     public async Task SaveExpenseAsync(Expense expense, string userId)
     {
         using var context = dbFactory.CreateDbContext();
@@ -43,7 +43,7 @@ public class ExpenseService(IDbContextFactory<ApplicationDbContext> dbFactory)
         await context.SaveChangesAsync();
     }
 
-    // Delete an expense
+    // Delete an expense only if it belongs to the authenticated user.
     public async Task DeleteExpenseAsync(int id, string userId)
     {
         using var context = dbFactory.CreateDbContext();
