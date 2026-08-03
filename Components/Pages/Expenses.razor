@@ -21,7 +21,7 @@
     <div class="d-flex flex-column flex-sm-row gap-2">
         <button class="btn btn-outline-success"
                 @onclick="ExportExpensesAsync"
-                disabled="@(expenses is null || !expenses.Any() || isExporting)">
+                disabled="@(!FilteredExpenses.Any() || IsDateRangeInvalid || isExporting)">
             @if (isExporting)
             {
                 <span class="spinner-border spinner-border-sm me-1"
@@ -123,76 +123,137 @@ else if (!expenses.Any())
 }
 else
 {
-    <div class="d-block d-md-none">
-        <div class="d-flex flex-column gap-3">
-            @foreach (var exp in expenses)
-            {
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="fw-bold mb-0 text-dark">@exp.Title</h6>
-                                <small class="text-muted d-block mt-1">
-                                    <i class="bi bi-calendar3 me-1"></i>@exp.Date.ToString("MMM dd, yyyy")
-                                </small>
-                            </div>
-                            <span class="fs-5 fw-bold text-success">$@exp.Amount.ToString("F2")</span>
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(exp.Note))
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="expense-category-filter" class="form-label fw-semibold small">Category</label>
+                    <InputSelect id="expense-category-filter"
+                                 @bind-Value="selectedCategory"
+                                 class="form-select">
+                        <option value="">All Categories</option>
+                        @foreach (var category in AvailableCategories)
                         {
-                            <p class="small text-secondary mb-2 bg-light p-2 rounded-2">
-                                @exp.Note
-                            </p>
+                            <option value="@category">@category</option>
                         }
-
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">@exp.Category</span>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-warning" @onclick="() => EditExpense(exp)">Edit</button>
-                                <button class="btn btn-outline-danger" @onclick="() => DeleteExpense(exp.Id)">Delete</button>
-                            </div>
-                        </div>
-                    </div>
+                    </InputSelect>
                 </div>
-            }
+
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="expense-start-date-filter" class="form-label fw-semibold small">From</label>
+                    <InputDate id="expense-start-date-filter"
+                               @bind-Value="startDate"
+                               class="form-control" />
+                </div>
+
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label for="expense-end-date-filter" class="form-label fw-semibold small">To</label>
+                    <InputDate id="expense-end-date-filter"
+                               @bind-Value="endDate"
+                               class="form-control" />
+                </div>
+
+                <div class="col-12 col-md-2">
+                    <button type="button"
+                            class="btn btn-outline-secondary w-100"
+                            @onclick="ClearFilters"
+                            disabled="@(!HasActiveFilters)">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="small text-muted mt-3" aria-live="polite">
+                Showing @FilteredExpenses.Count() of @expenses.Count expense record(s).
+            </div>
         </div>
     </div>
 
-    <div class="d-none d-md-block card border-0 shadow-sm rounded-3 overflow-hidden">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th style="width: 15%;">Date</th>
-                    <th style="width: 35%;">Title / Note</th>
-                    <th style="width: 15%;">Category</th>
-                    <th class="text-end" style="width: 15%;">Amount</th>
-                    <th class="text-center" style="width: 20%;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var exp in expenses)
+    @if (IsDateRangeInvalid)
+    {
+        <div class="alert alert-warning border-0 shadow-sm rounded-3" role="alert">
+            The From date must be earlier than or equal to the To date.
+        </div>
+    }
+    else if (!FilteredExpenses.Any())
+    {
+        <div class="alert alert-info border-0 shadow-sm rounded-3" role="status">
+            No expenses match the selected filters. Adjust the filters or select <strong>Reset</strong>.
+        </div>
+    }
+    else
+    {
+        <div class="d-block d-md-none">
+            <div class="d-flex flex-column gap-3">
+                @foreach (var exp in FilteredExpenses)
                 {
-                    <tr>
-                        <td class="text-muted small">@exp.Date.ToString("yyyy-MM-dd")</td>
-                        <td>
-                            <div class="fw-bold text-dark">@exp.Title</div>
+                    <div class="card border-0 shadow-sm rounded-3">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-dark">@exp.Title</h6>
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-calendar3 me-1"></i>@exp.Date.ToString("MMM dd, yyyy")
+                                    </small>
+                                </div>
+                                <span class="fs-5 fw-bold text-success">$@exp.Amount.ToString("F2")</span>
+                            </div>
+
                             @if (!string.IsNullOrWhiteSpace(exp.Note))
                             {
-                                <div class="small text-muted text-truncate" style="max-width: 300px;">@exp.Note</div>
+                                <p class="small text-secondary mb-2 bg-light p-2 rounded-2">
+                                    @exp.Note
+                                </p>
                             }
-                        </td>
-                        <td><span class="badge bg-secondary">@exp.Category</span></td>
-                        <td class="text-end fw-bold text-dark">$@exp.Amount.ToString("F2")</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => EditExpense(exp)">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteExpense(exp.Id)">Delete</button>
-                        </td>
-                    </tr>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">@exp.Category</span>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-warning" @onclick="() => EditExpense(exp)">Edit</button>
+                                    <button class="btn btn-outline-danger" @onclick="() => DeleteExpense(exp.Id)">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
-    </div>
+            </div>
+        </div>
+
+        <div class="d-none d-md-block card border-0 shadow-sm rounded-3 overflow-hidden">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%;">Date</th>
+                        <th style="width: 35%;">Title / Note</th>
+                        <th style="width: 15%;">Category</th>
+                        <th class="text-end" style="width: 15%;">Amount</th>
+                        <th class="text-center" style="width: 20%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var exp in FilteredExpenses)
+                    {
+                        <tr>
+                            <td class="text-muted small">@exp.Date.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <div class="fw-bold text-dark">@exp.Title</div>
+                                @if (!string.IsNullOrWhiteSpace(exp.Note))
+                                {
+                                    <div class="small text-muted text-truncate" style="max-width: 300px;">@exp.Note</div>
+                                }
+                            </td>
+                            <td><span class="badge bg-secondary">@exp.Category</span></td>
+                            <td class="text-end fw-bold text-dark">$@exp.Amount.ToString("F2")</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => EditExpense(exp)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteExpense(exp.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 }
 
 @code {
@@ -203,6 +264,37 @@ else
     private bool exportSucceeded;
     private string? exportMessage;
     private string userId = string.Empty;
+    private string? selectedCategory;
+    private DateTime? startDate;
+    private DateTime? endDate;
+
+    private IEnumerable<string> AvailableCategories =>
+        expenses?
+            .Select(expense => expense.Category)
+            .Where(category => !string.IsNullOrWhiteSpace(category))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(category => category, StringComparer.OrdinalIgnoreCase)
+        ?? Enumerable.Empty<string>();
+
+    private IEnumerable<Expense> FilteredExpenses =>
+        expenses?
+            .Where(expense =>
+                (string.IsNullOrWhiteSpace(selectedCategory) ||
+                 string.Equals(expense.Category, selectedCategory, StringComparison.OrdinalIgnoreCase)) &&
+                (!startDate.HasValue || expense.Date.Date >= startDate.Value.Date) &&
+                (!endDate.HasValue || expense.Date.Date <= endDate.Value.Date))
+            .OrderByDescending(expense => expense.Date)
+        ?? Enumerable.Empty<Expense>();
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(selectedCategory) ||
+        startDate.HasValue ||
+        endDate.HasValue;
+
+    private bool IsDateRangeInvalid =>
+        startDate.HasValue &&
+        endDate.HasValue &&
+        startDate.Value.Date > endDate.Value.Date;
 
     protected override async Task OnInitializedAsync()
     {
@@ -270,7 +362,9 @@ else
 
     private async Task ExportExpensesAsync()
     {
-        if (expenses is null || expenses.Count == 0 || isExporting)
+        var expensesToExport = FilteredExpenses.ToList();
+
+        if (expensesToExport.Count == 0 || IsDateRangeInvalid || isExporting)
         {
             return;
         }
@@ -280,7 +374,7 @@ else
 
         try
         {
-            var csvContent = GenerateCsv(expenses);
+            var csvContent = GenerateCsv(expensesToExport);
             var fileName = $"expenses-{DateTime.Today:yyyy-MM-dd}.csv";
 
             await JSRuntime.InvokeVoidAsync(
@@ -290,7 +384,7 @@ else
 
             exportSucceeded = true;
             exportMessage =
-                $"{expenses.Count} expense record(s) exported successfully.";
+                $"{expensesToExport.Count} expense record(s) exported successfully.";
         }
         catch
         {
@@ -353,5 +447,12 @@ else
     private void ClearExportMessage()
     {
         exportMessage = null;
+    }
+
+    private void ClearFilters()
+    {
+        selectedCategory = null;
+        startDate = null;
+        endDate = null;
     }
 }
