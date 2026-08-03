@@ -5,6 +5,7 @@ namespace ExpenseTracker.Services;
 
 public class IncomeService(IDbContextFactory<ApplicationDbContext> dbFactory)
 {
+    // Return only the income records that belong to the authenticated user.
     public async Task<List<IncomeTransaction>> GetIncomeAsync(string userId)
     {
         await using var context = await dbFactory.CreateDbContextAsync();
@@ -16,6 +17,7 @@ public class IncomeService(IDbContextFactory<ApplicationDbContext> dbFactory)
             .ToListAsync();
     }
 
+    // Create a new income record or update an existing one for the authenticated user.
     public async Task<bool> SaveIncomeAsync(IncomeTransaction income, string userId)
     {
         await using var context = await dbFactory.CreateDbContextAsync();
@@ -45,6 +47,7 @@ public class IncomeService(IDbContextFactory<ApplicationDbContext> dbFactory)
         return true;
     }
 
+    // Delete an income record only if it belongs to the authenticated user.
     public async Task<bool> DeleteIncomeAsync(int id, string userId)
     {
         await using var context = await dbFactory.CreateDbContextAsync();

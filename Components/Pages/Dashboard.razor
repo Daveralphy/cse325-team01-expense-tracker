@@ -285,6 +285,8 @@ else
         refreshCancellationTokenSource.Dispose();
     }
 
+    // Calculate the dashboard statistics, category summaries, and recent expenses
+    // using the authenticated user's expense records.
     private void BuildDashboard()
     {
         if (expenses is null)
@@ -295,6 +297,7 @@ else
         var currentMonth = DateTime.Today.Month;
         var currentYear = DateTime.Today.Year;
 
+        // Keep only the expenses from the current month for dashboard calculations.
         monthlyExpenses = expenses
             .Where(expense =>
                 expense.Date.Month == currentMonth &&
@@ -307,6 +310,7 @@ else
             .OrderByDescending(expense => expense.Amount)
             .FirstOrDefault();
 
+        // Group expenses by category and calculate the total spent in each category.
         categorySummaries = monthlyExpenses
             .GroupBy(expense => expense.Category)
             .Select(group => new CategorySummary
@@ -317,6 +321,7 @@ else
             .OrderByDescending(category => category.Total)
             .ToList();
 
+        // Display the five most recent expenses.
         recentExpenses = expenses
             .OrderByDescending(expense => expense.Date)
             .ThenByDescending(expense => expense.Id)
